@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/ability-sh/abi-lib/dynamic"
+	"github.com/ability-sh/abi-lib/errors"
 	"github.com/ability-sh/abi-lib/json"
 	"github.com/ability-sh/abi-micro-app/pb"
 	"github.com/ability-sh/abi-micro/grpc"
@@ -65,11 +66,11 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 		}
 
 		if rs.Errno != 200 {
-			return nil, Errorf(int(rs.Errno), "%s", rs.Errmsg)
+			return nil, errors.Errorf(rs.Errno, "%s", rs.Errmsg)
 		}
 
 		if rs.Data.Status != 1 {
-			return nil, Errorf(500, "未找到应用包")
+			return nil, errors.Errorf(500, "未找到应用包")
 		}
 
 		err = json.Unmarshal([]byte(rs.Data.Info), &info)
@@ -83,7 +84,7 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 	info_md5 := dynamic.StringValue(dynamic.Get(info, "md5"), "")
 
 	if info_md5 == "" {
-		return nil, Errorf(500, "错误的应用包")
+		return nil, errors.Errorf(500, "错误的应用包")
 	}
 
 	rs, err := cli.VerGetURL(ct, &pb.VerGetURLTask{Appid: appid, Ver: ver, Ability: ability})
@@ -93,7 +94,7 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 	}
 
 	if rs.Errno != 200 {
-		return nil, Errorf(int(rs.Errno), "%s", rs.Errmsg)
+		return nil, errors.Errorf(rs.Errno, "%s", rs.Errmsg)
 	}
 
 	err = os.MkdirAll(dir, os.ModePerm)
@@ -127,7 +128,7 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 	}
 
 	if info_md5 != hex.EncodeToString(mw.Sum(nil)) {
-		return nil, Errorf(500, "错误的应用包")
+		return nil, errors.Errorf(500, "错误的应用包")
 	}
 
 	unz, err := zip.OpenReader(zFile)
