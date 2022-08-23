@@ -73,7 +73,7 @@ func (s *ACService) OnInit(ctx micro.Context) error {
 		if t == "" || t == "default" {
 			dir := dynamic.StringValue(dynamic.Get(s.Container, "dir"), "./apps")
 			dir, _ = filepath.Abs(dir)
-			container = NewAppContainer("uv-app", dir)
+			container = NewAppContainer("abi-app", dir)
 		}
 	}
 

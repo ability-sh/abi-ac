@@ -1,0 +1,14 @@
+
+name: abi-ac
+
+services:
+  abi-ac:
+    type: abi-ac
+    control: /opt/homebrew/var/run/unit/control.sock 
+    unit:
+      listeners:
+        "*:80":
+           pass: "routes"
+      routes:
+        - action:
+            share: "/Users/zhanghailong/Documents/www/$uri"

@@ -5,7 +5,7 @@ import (
 )
 
 func init() {
-	micro.Reg("uv-ac", func(name string, config interface{}) (micro.Service, error) {
+	micro.Reg("abi-ac", func(name string, config interface{}) (micro.Service, error) {
 		return newACService(name, config), nil
 	})
 }
