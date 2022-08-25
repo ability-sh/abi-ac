@@ -1,15 +1,18 @@
 package main
 
 import (
-	"log"
-	"time"
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
+	"flag"
 
 	_ "github.com/ability-sh/abi-ac/ac"
 	_ "github.com/ability-sh/abi-micro/crontab"
 	_ "github.com/ability-sh/abi-micro/grpc"
 	_ "github.com/ability-sh/abi-micro/http"
 	_ "github.com/ability-sh/abi-micro/logger"
-	"github.com/ability-sh/abi-micro/micro"
 	_ "github.com/ability-sh/abi-micro/oss"
 	_ "github.com/ability-sh/abi-micro/redis"
 	"github.com/ability-sh/abi-micro/runtime"
@@ -17,27 +20,41 @@ import (
 
 func main() {
 
-	tk := time.NewTicker(time.Second * 6)
+	containerId := flag.String("containerId", "", "containerId")
+	secret := flag.String("secret", "", "secret")
+	baseURL := flag.String("baseURL", "https://ac.ability.sh", "baseURL")
 
-	var err error = nil
-	var payload micro.Payload = nil
+	flag.Parse()
 
-	for {
+	rd := bufio.NewReader(os.Stdin)
 
-		payload, err = runtime.NewFilePayload("./config.yaml", runtime.NewPayload())
+	var err error
 
+	if *containerId == "" {
+		fmt.Printf("Please enter a Container ID: ")
+		*containerId, err = rd.ReadString('\n')
+		*containerId = strings.TrimSpace(*containerId)
 		if err != nil {
-			log.Println(err, "Wait 6 seconds to try again")
-			<-tk.C
-		} else {
-			break
+			panic(err)
 		}
-
 	}
 
-	tk.Stop()
+	if *secret == "" {
+		fmt.Printf("Please enter Secret: ")
+		*secret, err = rd.ReadString('\n')
+		*secret = strings.TrimSpace(*secret)
+		if err != nil {
+			panic(err)
+		}
+	}
 
-	defer payload.Exit()
+	p, err := runtime.NewAcPayload(*baseURL, *containerId, *secret, runtime.NewPayload())
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer p.Exit()
 
 	select {}
 }
