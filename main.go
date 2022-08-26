@@ -27,6 +27,9 @@ func main() {
 		fs_containerId := flag.String("id", "", "Container ID")
 		fs_secret := flag.String("secret", "", "Container Secret")
 		fs_baseURL := flag.String("baseURL", "", "https://ac.ability.sh")
+
+		flag.Parse()
+
 		if *fs_containerId != "" {
 			containerId = *fs_containerId
 			os.Setenv("AC_ID", containerId)
@@ -39,7 +42,6 @@ func main() {
 			baseURL = *fs_baseURL
 			os.Setenv("AC_BASE_URL", baseURL)
 		}
-		flag.Parse()
 	}
 
 	if baseURL == "" {
