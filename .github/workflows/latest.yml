@@ -19,3 +19,5 @@ jobs:
           title: "Development Build"
           files: |
             abi-ac
+            abi-ac.md5
+            
