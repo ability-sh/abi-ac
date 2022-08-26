@@ -135,7 +135,7 @@ func (s *ACService) OnInit(ctx micro.Context) error {
 
 			if driver == ":go" {
 				ac_CONFIG(item, appid, ver, ability)
-				dynamic.Set(item, "executable", fmt.Sprintf("%s/bin/%s-%s", ability, runtime.GOOS, runtime.GOARCH))
+				dynamic.Set(item, "executable", fmt.Sprintf("./%s/bin/%s-%s", root, runtime.GOOS, runtime.GOARCH))
 				dynamic.Set(item, "type", "external")
 				dynamic.Set(item, "working_directory", pkg.Dir())
 			} else if driver == ":node" {
