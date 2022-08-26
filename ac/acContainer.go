@@ -29,12 +29,13 @@ type acContainer struct {
 }
 
 func NewACContainer(config interface{}) Container {
-	dir, _ := filepath.Abs("./apps")
+	dir := dynamic.StringValue(dynamic.Get(config, "dir"), "./apps")
+	dir, _ = filepath.Abs(dir)
 	return &acContainer{
 		baseURL: dynamic.StringValue(dynamic.Get(config, "baseURL"), "https://ac.ability.sh"),
 		id:      dynamic.StringValue(dynamic.Get(config, "id"), ""),
 		secret:  dynamic.StringValue(dynamic.Get(config, "secret"), ""),
-		dir:     dynamic.StringValue(dynamic.Get(config, "dir"), dir),
+		dir:     dir,
 	}
 }
 
