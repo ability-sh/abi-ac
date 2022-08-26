@@ -2,11 +2,10 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
-
-	"flag"
 
 	_ "github.com/ability-sh/abi-ac/ac"
 	_ "github.com/ability-sh/abi-micro/crontab"
@@ -24,12 +23,26 @@ func main() {
 	secret := os.Getenv("AC_SECRET")
 	baseURL := os.Getenv("AC_BASE_URL")
 
+	{
+		fs_containerId := flag.String("id", "", "Container ID")
+		fs_secret := flag.String("secret", "", "Container Secret")
+		fs_baseURL := flag.String("baseURL", "", "https://ac.ability.sh")
+		if *fs_containerId != "" {
+			containerId = *fs_containerId
+		}
+		if *fs_secret != "" {
+			secret = *fs_secret
+		}
+		if *fs_baseURL != "" {
+			baseURL = *fs_baseURL
+		}
+		flag.Parse()
+	}
+
 	if baseURL == "" {
 		baseURL = "https://ac.ability.sh"
 		os.Setenv("AC_BASE_URL", baseURL)
 	}
-
-	flag.Parse()
 
 	rd := bufio.NewReader(os.Stdin)
 
