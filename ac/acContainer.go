@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"io"
@@ -13,23 +14,28 @@ import (
 
 	"github.com/ability-sh/abi-lib/dynamic"
 	"github.com/ability-sh/abi-lib/errors"
-	"github.com/ability-sh/abi-lib/json"
-	"github.com/ability-sh/abi-micro-app/pb"
-	"github.com/ability-sh/abi-micro/grpc"
 	"github.com/ability-sh/abi-micro/http"
 	"github.com/ability-sh/abi-micro/micro"
 )
 
-type appContainer struct {
-	name string
-	dir  string
+type acContainer struct {
+	baseURL string
+	id      string
+	secret  string
+	dir     string
 }
 
-func NewAppContainer(name string, dir string) Container {
-	return &appContainer{name: name, dir: dir}
+func NewACContainer(config interface{}) Container {
+	dir, _ := filepath.Abs("./apps")
+	return &acContainer{
+		baseURL: dynamic.StringValue(dynamic.Get(config, "baseURL"), "https://ac.ability.sh"),
+		id:      dynamic.StringValue(dynamic.Get(config, "id"), ""),
+		secret:  dynamic.StringValue(dynamic.Get(config, "secret"), ""),
+		dir:     dynamic.StringValue(dynamic.Get(config, "dir"), dir),
+	}
 }
 
-func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, ability string) (Package, error) {
+func (c *acContainer) GetPackage(ctx micro.Context, appid string, ver string, ability string) (Package, error) {
 
 	dir := filepath.Join(c.dir, ability, appid, ver)
 
@@ -39,62 +45,38 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 		return p, nil
 	}
 
-	conn, err := grpc.GetConn(ctx, c.name)
-
-	if err != nil {
-		return nil, err
-	}
-
 	xhr, err := http.GetHTTPService(ctx, "http")
 
 	if err != nil {
 		return nil, err
 	}
 
-	cli := pb.NewServiceClient(conn)
-
-	ct := grpc.NewGRPCContext(ctx)
-
-	var info interface{} = nil
-	var info_s string = ""
-
-	{
-		rs, err := cli.VerGet(ct, &pb.VerGetTask{Appid: appid, Ver: ver})
-
-		if err != nil {
-			return nil, err
-		}
-
-		if rs.Errno != 200 {
-			return nil, errors.Errorf(rs.Errno, "%s", rs.Errmsg)
-		}
-
-		if rs.Data.Status != 1 {
-			return nil, errors.Errorf(500, "未找到应用包")
-		}
-
-		err = json.Unmarshal([]byte(rs.Data.Info), &info)
-
-		if err != nil {
-			return nil, err
-		}
-		info_s = rs.Data.Info
-	}
-
-	info_md5 := dynamic.StringValue(dynamic.Get(info, "md5"), "")
-
-	if info_md5 == "" {
-		return nil, errors.Errorf(500, "错误的应用包")
-	}
-
-	rs, err := cli.VerGetURL(ct, &pb.VerGetURLTask{Appid: appid, Ver: ver, Ability: ability})
+	res, err := xhr.Request(ctx, "GET").
+		SetURL(fmt.Sprintf("%s/store/container/app/get.json", c.baseURL), map[string]string{}).
+		Send()
 
 	if err != nil {
 		return nil, err
 	}
 
-	if rs.Errno != 200 {
-		return nil, errors.Errorf(rs.Errno, "%s", rs.Errmsg)
+	rs, err := res.PraseBody()
+
+	if err != nil {
+		return nil, err
+	}
+
+	errno := int32(dynamic.IntValue(dynamic.Get(rs, "errno"), 0))
+
+	if errno != 200 {
+		return nil, errors.Errorf(errno, dynamic.StringValue(dynamic.Get(rs, "errmsg"), "Internal service error"))
+	}
+
+	info := dynamic.GetWithKeys(rs, []string{"data", "info"})
+	info_md5 := dynamic.StringValue(dynamic.GetWithKeys(info, []string{ability, "md5"}), "")
+	url := dynamic.StringValue(dynamic.GetWithKeys(rs, []string{"data", "url"}), "")
+
+	if info_md5 == "" || url == "" {
+		return nil, errors.Errorf(500, "App package not available")
 	}
 
 	err = os.MkdirAll(dir, os.ModePerm)
@@ -115,7 +97,7 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 
 	mw := newMD5Writer(fd)
 
-	res, err := xhr.Request(ctx, "GET").SetURL(rs.Data, nil).SetOutput(mw).Send()
+	res, err = xhr.Request(ctx, "GET").SetURL(url, nil).SetOutput(mw).Send()
 
 	if err != nil {
 		return nil, err
@@ -128,7 +110,7 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 	}
 
 	if info_md5 != hex.EncodeToString(mw.Sum(nil)) {
-		return nil, errors.Errorf(500, "错误的应用包")
+		return nil, errors.Errorf(500, "App package not available")
 	}
 
 	unz, err := zip.OpenReader(zFile)
@@ -174,7 +156,9 @@ func (c *appContainer) GetPackage(ctx micro.Context, appid string, ver string, a
 		}
 	}
 
-	err = ioutil.WriteFile(filepath.Join(dir, "app.json"), []byte(info_s), os.ModePerm)
+	info_s, _ := json.MarshalIndent(info, "", "  ")
+
+	err = ioutil.WriteFile(filepath.Join(dir, "app.json"), info_s, os.ModePerm)
 
 	if err != nil {
 		return nil, err

@@ -2,6 +2,7 @@ package ac
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -10,6 +11,13 @@ import (
 	"github.com/ability-sh/abi-lib/json"
 	"github.com/ability-sh/abi-micro/micro"
 )
+
+type ACContainer struct {
+	BaseURL string `json:"baseURL"`
+	Id      string `json:"id"`
+	Secret  string `json:"secret"`
+	Dir     string `json:"dir"`
+}
 
 type ACService struct {
 	config    interface{} `json:"-"`
@@ -69,11 +77,16 @@ func (s *ACService) OnInit(ctx micro.Context) error {
 	var container Container = nil
 
 	{
-		t := dynamic.StringValue(dynamic.Get(s.Container, "type"), "")
-		if t == "" || t == "default" {
-			dir := dynamic.StringValue(dynamic.Get(s.Container, "dir"), "./apps")
-			dir, _ = filepath.Abs(dir)
-			container = NewAppContainer("abi-app", dir)
+		driver := dynamic.StringValue(dynamic.Get(s.Container, "driver"), "")
+		if driver == "ac" {
+			container = NewACContainer(s.Container)
+		} else {
+			container = NewACContainer(map[string]interface{}{
+				"baseURL": os.Getenv("AC_BASE_URL"),
+				"id":      os.Getenv("AC_ID"),
+				"secret":  os.Getenv("AC_SECRET"),
+				"dir":     "./apps",
+			})
 		}
 	}
 
@@ -122,12 +135,12 @@ func (s *ACService) OnInit(ctx micro.Context) error {
 
 			if driver == ":go" {
 				ac_CONFIG(item, appid, ver, ability)
-				dynamic.Set(item, "executable", fmt.Sprintf("bin/%s/%s/cloud", runtime.GOOS, runtime.GOARCH))
+				dynamic.Set(item, "executable", fmt.Sprintf("%s/bin/%s-%s", ability, runtime.GOOS, runtime.GOARCH))
 				dynamic.Set(item, "type", "external")
 				dynamic.Set(item, "working_directory", pkg.Dir())
 			} else if driver == ":node" {
 				ac_CONFIG(item, appid, ver, ability)
-				dynamic.Set(item, "executable", filepath.Join(root, "unit.js"))
+				dynamic.Set(item, "executable", filepath.Join(root, "main.js"))
 				dynamic.Set(item, "type", "external")
 				dynamic.Set(item, "working_directory", pkg.Dir())
 			} else {

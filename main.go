@@ -20,9 +20,14 @@ import (
 
 func main() {
 
-	containerId := flag.String("containerId", "", "containerId")
-	secret := flag.String("secret", "", "secret")
-	baseURL := flag.String("baseURL", "https://ac.ability.sh", "baseURL")
+	containerId := os.Getenv("AC_ID")
+	secret := os.Getenv("AC_SECRET")
+	baseURL := os.Getenv("AC_BASE_URL")
+
+	if baseURL == "" {
+		baseURL = "https://ac.ability.sh"
+		os.Setenv("AC_BASE_URL", baseURL)
+	}
 
 	flag.Parse()
 
@@ -30,25 +35,27 @@ func main() {
 
 	var err error
 
-	if *containerId == "" {
+	if containerId == "" {
 		fmt.Printf("Please enter a Container ID: ")
-		*containerId, err = rd.ReadString('\n')
-		*containerId = strings.TrimSpace(*containerId)
+		containerId, err = rd.ReadString('\n')
+		containerId = strings.TrimSpace(containerId)
+		os.Setenv("AC_ID", containerId)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if *secret == "" {
+	if secret == "" {
 		fmt.Printf("Please enter Secret: ")
-		*secret, err = rd.ReadString('\n')
-		*secret = strings.TrimSpace(*secret)
+		secret, err = rd.ReadString('\n')
+		secret = strings.TrimSpace(secret)
+		os.Setenv("AC_SECRET", secret)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	p, err := runtime.NewAcPayload(*baseURL, *containerId, *secret, runtime.NewPayload())
+	p, err := runtime.NewAcPayload(baseURL, containerId, secret, runtime.NewPayload())
 
 	if err != nil {
 		panic(err)
