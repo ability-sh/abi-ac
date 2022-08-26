@@ -198,7 +198,10 @@ func (s *ACService) OnInit(ctx micro.Context) error {
 		return true
 	})
 
-	ctx.Println(s.Unit)
+	{
+		b, _ := json.Marshal(s.Unit)
+		ctx.Println(string(b))
+	}
 
 	if err != nil {
 		ctx.Println(err)
