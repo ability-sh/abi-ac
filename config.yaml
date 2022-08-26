@@ -12,5 +12,6 @@ services:
       routes:
         - action:
             share: "/Users/zhanghailong/Documents/www/$uri"
+            
   http:
     type: http
