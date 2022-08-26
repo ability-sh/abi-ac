@@ -29,12 +29,15 @@ func main() {
 		fs_baseURL := flag.String("baseURL", "", "https://ac.ability.sh")
 		if *fs_containerId != "" {
 			containerId = *fs_containerId
+			os.Setenv("AC_ID", containerId)
 		}
 		if *fs_secret != "" {
 			secret = *fs_secret
+			os.Setenv("AC_SECRET", secret)
 		}
 		if *fs_baseURL != "" {
 			baseURL = *fs_baseURL
+			os.Setenv("AC_BASE_URL", baseURL)
 		}
 		flag.Parse()
 	}
