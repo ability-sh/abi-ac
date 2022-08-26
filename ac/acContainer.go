@@ -11,6 +11,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"time"
 
 	"github.com/ability-sh/abi-lib/dynamic"
 	"github.com/ability-sh/abi-lib/errors"
@@ -35,6 +38,36 @@ func NewACContainer(config interface{}) Container {
 	}
 }
 
+func (c *acContainer) Sign(data map[string]string) string {
+
+	m := md5.New()
+
+	keys := []string{}
+
+	for key, _ := range data {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	op_and := []byte("&")
+	op_eq := []byte("=")
+
+	for i, key := range keys {
+		if i != 0 {
+			m.Write(op_and)
+		}
+		m.Write([]byte(key))
+		m.Write(op_eq)
+		m.Write([]byte(data[key]))
+	}
+
+	m.Write(op_and)
+	m.Write([]byte(c.secret))
+
+	return hex.EncodeToString(m.Sum(nil))
+}
+
 func (c *acContainer) GetPackage(ctx micro.Context, appid string, ver string, ability string) (Package, error) {
 
 	dir := filepath.Join(c.dir, ability, appid, ver)
@@ -51,8 +84,12 @@ func (c *acContainer) GetPackage(ctx micro.Context, appid string, ver string, ab
 		return nil, err
 	}
 
+	data := map[string]string{"id": c.id, "appid": appid, "ver": ver, "ability": ability, "timestamp": strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)}
+
+	data["sign"] = c.Sign(data)
+
 	res, err := xhr.Request(ctx, "GET").
-		SetURL(fmt.Sprintf("%s/store/container/app/get.json", c.baseURL), map[string]string{}).
+		SetURL(fmt.Sprintf("%s/store/container/app/get.json", c.baseURL), data).
 		Send()
 
 	if err != nil {
