@@ -57,8 +57,8 @@ func ac_CONFIG(item interface{}, appid string, ver string, ability string) {
 	dynamic.Set(environment, "AC_ABILITY", ability)
 	config := dynamic.Get(item, "config")
 	if config != nil {
-		b, _ := json.Marshal(config)
-		dynamic.Set(environment, "AC_CONFIG", string(b))
+		s, _ := json.Stringify(config)
+		dynamic.Set(environment, "AC_CONFIG", s)
 		dynamic.Set(item, "config", nil)
 	}
 }

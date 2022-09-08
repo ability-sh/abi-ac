@@ -3,8 +3,8 @@ module github.com/ability-sh/abi-ac
 go 1.18
 
 require (
-	github.com/ability-sh/abi-lib v1.0.3
-	github.com/ability-sh/abi-micro v1.0.6
+	github.com/ability-sh/abi-lib v1.0.8
+	github.com/ability-sh/abi-micro v1.0.11
 )
 
 require (
